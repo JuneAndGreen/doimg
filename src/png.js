@@ -212,28 +212,28 @@ class Png {
 		let bytesPerRow = bytesPerPixel * this.width; // 每行字节数
 
 		let pixelsBuffer = new Buffer(bpp * png.width * png.height);
-		let offset = 0; // 当前的偏移位置
+		let offset = 0; // 当前行的偏移位置
 
 		// 逐行扫描解析
-		for(let i=0, len=data.length; i<len; i+=bytesPerRow+1) {
-			let line = Array.prototype.slice.call(data, i+1, i+bytesPerRow); // 当前行
+		for(let i=0, len=data.length; i<len; i+=bytesPerRow) {
+			let scanline = Array.prototype.slice.call(data, i+1, i+bytesPerRow); // 当前行
 
 			// 第一个字节代表过滤类型
 			switch(_.readInt8(data, i)) {
 				case 0:
-					this.unFilterNone(line, pixelsBuffer, bytesPerPixel, offset, bytesPerRow);
+					this.unFilterNone(scanline, pixelsBuffer, bytesPerPixel, bytesPerRow, offset);
 					break;
 				case 1:
-					this.unFilterSub(line, pixelsBuffer, bytesPerPixel, offset, bytesPerRow);
+					this.unFilterSub(scanline, pixelsBuffer, bytesPerPixel, bytesPerRow, offset);
 					break;
 				case 2:
-					this.unFilterUp(line, pixelsBuffer, bytesPerPixel, offset, bytesPerRow);
+					this.unFilterUp(scanline, pixelsBuffer, bytesPerPixel, bytesPerRow, offset);
 					break;
 				case 3:
-					this.unFilterAverage(line, pixelsBuffer, bytesPerPixel, offset, bytesPerRow);
+					this.unFilterAverage(scanline, pixelsBuffer, bytesPerPixel, bytesPerRow, offset);
 					break;
 				case 4:
-					this.unFilterPaeth(line, pixelsBuffer, bytesPerPixel, offset, bytesPerRow);
+					this.unFilterPaeth(scanline, pixelsBuffer, bytesPerPixel, bytesPerRow, offset);
 					break;
 				default:
 					throw new Error('未知过滤类型！');
@@ -251,23 +251,63 @@ class Png {
 		throw new Error('暂不支持Adam7扫描方式！');
 	}
 
-	unFilterNone() {
+	/**
+	 * 无过滤器解析
+	 * @param  {Array}  scanline      当前行带解析数据
+	 * @param  {Array}  pixelsBuffer  解析后数据
+	 * @param  {Numver} bytesPerPixel 每像素字节数
+	 * @param  {Number} bytesPerRow   每行字节数
+	 * @param  {Number} offset        偏移位置
+	 */
+	unFilterNone(scanline, pixelsBuffer, bytesPerPixel, bytesPerRow, offset) {
 
 	}
 
-	unFilterSub() {
+	/**
+	 * [unFilterNone description]
+	 * @param  {Array}  scanline      当前行带解析数据
+	 * @param  {Array}  pixelsBuffer  解析后数据
+	 * @param  {Numver} bytesPerPixel 每像素字节数
+	 * @param  {Number} bytesPerRow   每行字节数
+	 * @param  {Number} offset        偏移位置
+	 */
+	unFilterSub(scanline, pixelsBuffer, bytesPerPixel, bytesPerRow, offset) {
 
 	}
 
-	unFilterUp() {
+	/**
+	 * [unFilterNone description]
+	 * @param  {Array}  scanline      当前行带解析数据
+	 * @param  {Array}  pixelsBuffer  解析后数据
+	 * @param  {Numver} bytesPerPixel 每像素字节数
+	 * @param  {Number} bytesPerRow   每行字节数
+	 * @param  {Number} offset        偏移位置
+	 */
+	unFilterUp(scanline, pixelsBuffer, bytesPerPixel, bytesPerRow, offset) {
 
 	}
 
-	unFilterAverage() {
+	/**
+	 * [unFilterNone description]
+	 * @param  {Array}  scanline      当前行带解析数据
+	 * @param  {Array}  pixelsBuffer  解析后数据
+	 * @param  {Numver} bytesPerPixel 每像素字节数
+	 * @param  {Number} bytesPerRow   每行字节数
+	 * @param  {Number} offset        偏移位置
+	 */
+	unFilterAverage(scanline, pixelsBuffer, bytesPerPixel, bytesPerRow, offset) {
 
 	}
 
-	unFilterPaeth() {
+	/**
+	 * [unFilterNone description]
+	 * @param  {Array}  scanline      当前行带解析数据
+	 * @param  {Array}  pixelsBuffer  解析后数据
+	 * @param  {Numver} bytesPerPixel 每像素字节数
+	 * @param  {Number} bytesPerRow   每行字节数
+	 * @param  {Number} offset        偏移位置
+	 */
+	unFilterPaeth(scanline, pixelsBuffer, bytesPerPixel, bytesPerRow, offset) {
 
 	}
 
