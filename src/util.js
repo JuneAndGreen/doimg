@@ -112,4 +112,5 @@ module.exports = {
 	inflate(data, callback) {
 		zlib.inflate(new Buffer(data), callback);
 	}
+
 };
