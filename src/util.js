@@ -111,6 +111,19 @@ module.exports = {
 	 */
 	inflate(data, callback) {
 		zlib.inflate(new Buffer(data), callback);
+	},
+
+	/**
+	 * deflate压缩算法封装
+	 * @param  {Array}    data     待解压数据
+	 * @param  {Function} callback 回调
+	 */
+	deflate(data, callback) {
+		zlib.deflate(new Buffer(data), callback);
+	},
+
+	validate() {
+		
 	}
 
 };
