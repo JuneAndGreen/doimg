@@ -38,7 +38,7 @@ module.exports = {
 	 */
 	readInt16(buffer, offset) {
 		offset = offset || 0;
-		return (buffer[offset + 2] << 8) + (buffer[offset + 3] << 0);
+		return (buffer[offset] << 8) + (buffer[offset + 1] << 0);
 	},
 
 	/**
@@ -49,7 +49,7 @@ module.exports = {
 	 */
 	readInt8(buffer, offset) {
 		offset = offset || 0;
-		return buffer[offset + 3] << 0;
+		return buffer[offset] << 0;
 	},
 
 	/**
@@ -85,7 +85,7 @@ module.exports = {
 	 * @return {String}   该对象类型
 	 */
 	getType(o) {
-		Object.prototype.toString.call(o).slice(8, -1).toLowerCase();
+		return Object.prototype.toString.call(o).slice(8, -1).toLowerCase();
 	},
 
 	/**
@@ -106,20 +106,20 @@ module.exports = {
 
 	/**
 	 * inflate解压缩算法封装
-	 * @param  {Array}    data     待解压数据
-	 * @param  {Function} callback 回调
+	 * @param  {Array}  data  待解压数据
+	 * @return {Array}        已解压数据      
 	 */
-	inflate(data, callback) {
-		zlib.inflate(new Buffer(data), callback);
+	inflateSync(data) {
+		return zlib.inflate(new Buffer(data));
 	},
 
 	/**
 	 * deflate压缩算法封装
-	 * @param  {Array}    data     待解压数据
-	 * @param  {Function} callback 回调
+	 * @param  {Array}  data  待压缩数据
+	 * @return {Array}        已压缩数据
 	 */
-	deflate(data, callback) {
-		zlib.deflate(new Buffer(data), callback);
+	deflateSync(data) {
+		return zlib.deflate(new Buffer(data));
 	},
 
 	validate() {

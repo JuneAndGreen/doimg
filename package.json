@@ -1,0 +1,31 @@
+{
+  "name": "doimg",
+  "version": "0.0.1",
+  "description": "an images tool for nodejs",
+  "main": "index.js",
+  "bin": {
+    "hala": "./bin/doimg.js"
+  },
+  "scripts": {
+    "test": "node ./bin/test.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JuneAndGreen/doimg.git"
+  },
+  "keywords": [
+    "image",
+    "jpeg",
+    "jpg",
+    "png",
+    "gif"
+  ],
+  "author": "june_01",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/JuneAndGreen/doimg/issues"
+  },
+  "homepage": "https://github.com/JuneAndGreen/doimg#readme",
+  "devDependencies": {},
+  "dependencies": {}
+}

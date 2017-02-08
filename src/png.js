@@ -9,21 +9,25 @@ const DEFAULT = {
 
 class Png {
 	constructor(options) {
+		this.index = 0; // 解码游标
+		this.dataChunks = []; // 图像数据chunk数组
+		this.length = 0; // 数据总长度
+
+		let optionsType = _.getType(options);
+
 		// 传入buffer数组，则做解码用
-		if(_.getType(options) === 'string') {
+		if(optionsType === 'string') {
 			this.buffer = _.stringToBuffer(options);
-		} else if(_.getType(options) === 'ArrayBuffer') {
+		} else if(optionsType === 'uint8array') {
 			this.buffer = new Uint8Array(options);
 		}
 
 		// 传入对象，则做编码用
-		if(_.getType(options) === 'object') {
+		if(optionsType === 'object') {
 			this.options = options;
 		}
 
-		this.index = 0; // 解码游标
-		this.dataChunks = []; // 图像数据chunk数组
-		this.length = 0; // 数据总长度
+		if(this.buffer) this.decode(true); // 预解码
 	}
 
 	/**
@@ -39,18 +43,8 @@ class Png {
 	}
 
 	/**
-	 * 解码
-	 */
-	decode() {
-		if(!this.buffer) {
-			throw new Error('不存在待解码数据！');
-		}
-
-		// TODO
-	}
-
-	/**
 	 * 编码
+	 * @return {Void}
 	 */
 	encode() {
 		if(!this.options) {
@@ -61,8 +55,34 @@ class Png {
 	}
 
 	/**
+	 * 解码
+	 * @param  {Boolean}  onlyDecodePngInfo  是否只解析png的基本信息
+	 * @return {Void}
+	 */
+	decode(onlyDecodePngInfo) {
+		if(!this.buffer) {
+			throw new Error('不存在待解码数据！');
+		}
+
+		this.decodeHeader(); // 解析头部信息
+
+		this.decodeChunk(); // 解析IHDR数据块
+
+		if(!onlyDecodePngInfo) {
+			while(this.index < this.buffer.length) {
+				// 继续解析其他数据块
+				let type = this.decodeChunk();
+				if(type === 'IEND') break;
+			}
+
+			this.decodeIDATChunks();
+		}
+	}
+
+	/**
 	 * 解码头部信息
 	 * https://www.w3.org/TR/PNG/#5PNG-file-signature
+	 * @return {Void}
 	 */
 	decodeHeader() {
 		if(this.index !== 0) {
@@ -70,7 +90,7 @@ class Png {
 		}
 
 		let header = this.readBytes(8);
-		if(!equal(header) = DEFAULT.header) {
+		if(!_.equal(header, DEFAULT.header)) {
 			throw new Error('png的签名信息不合法！')
 		}
 
@@ -115,20 +135,21 @@ class Png {
 	 * 解码IHDR数据块
 	 * https://www.w3.org/TR/PNG/#11IHDR
 	 * @param  {Array} chunk 数据块信息
+	 * @return {Void}
 	 */
 	decodeIHDR(chunk) {
 		this.width = _.readInt32(chunk); // 宽
 		this.height = _.readInt32(chunk, 4); // 高
 
 		// 图像深度，即每个颜色信息包含的位数
-		this.bitDepth = _.readInt32(chunk, 8);
+		this.bitDepth = _.readInt8(chunk, 8);
 		if([1, 2, 4, 8, 16].indexOf(this.bitDepth) === -1) {
 			throw new Error('不合法的图像深度！');
 		}
 
 		// 颜色类型
 		// 其中 this.colors 代表每个像素数据包含的颜色数量信息
-		this.colorType = _.readInt32(chunk, 9);
+		this.colorType = _.readInt8(chunk, 9);
 		switch(this.colorType) {
 			case 0:
 				// 灰度图像
@@ -157,20 +178,20 @@ class Png {
 		}
 
 		// 压缩方法
-		this.compressionMethod = _.readInt32(chunk, 10);
+		this.compressionMethod = _.readInt8(chunk, 10);
 		if(this.compressionMethod !== 0) {
 			throw new Error('不合法的压缩方法！');
 		}
 
 		// 过滤器方法
-		this.filterMethod = _.readInt32(chunk, 11);
+		this.filterMethod = _.readInt8(chunk, 11);
 		if(this.filterMethod !== 0) {
 			throw new Error('不合法的过滤器方法！');
 		}
 
 		// 行扫描方法
-		this.InterlaceMethod = _.readInt32(chunk, 12);
-		if(this.InterlaceMethod !== 0 && this.InterlaceMethod !== 1) {
+		this.interlaceMethod = _.readInt8(chunk, 12);
+		if(this.interlaceMethod !== 0 && this.interlaceMethod !== 1) {
 			throw new Error('不合法的行扫描方法！');
 		}
 	}
@@ -179,6 +200,7 @@ class Png {
 	 * 解码PLTE数据块
 	 * https://www.w3.org/TR/PNG/#11PLTE
 	 * @param  {Array} chunk 数据块信息
+	 * @return {Void}
 	 */
 	decodePLTE(chunk) {
 		if(chunk.length % 3 !== 0) {
@@ -195,6 +217,7 @@ class Png {
 	 * 解码IDAT数据块
 	 * https://www.w3.org/TR/PNG/#11IDAT
 	 * @param  {Array} chunk 数据块信息
+	 * @return {Void}
 	 */
 	decodeIDAT(chunk) {
 		this.dataChunks.push(chunk);
@@ -205,15 +228,17 @@ class Png {
 	 * 解码IEND数据块
 	 * https://www.w3.org/TR/PNG/#11IEND
 	 * @param  {Array} chunk 数据块信息
+	 * @return {Void}
 	 */
 	decodeIEND(chunk) {
-		if(!equal(chunk) = DEFAULT.end) {
+		if(!_.equal(chunk, DEFAULT.end)) {
 			throw new Error('不合法的IEND数据块！')
 		}
 	}
 
 	/**
 	 * 解码完整连续的IDAT数据块
+	 * @return {Void}
 	 */
 	decodeIDATChunks() {
 		let data = new Buffer(this.length);
@@ -222,13 +247,19 @@ class Png {
 			chunk.forEach((itme) => {data[index++] = item});
 		});
 
-		// inflate
-		// TODO
+		// inflate解压缩
+		let buffer = _.inflateSync(this.buffer);
+		if(this.interlaceMethod === 0){
+			reader.interlaceNone(data);
+		} else {
+			reader.interlaceAdam7(data);
+		}
 	}
 
 	/**
 	 * 逐行扫描
 	 * @param  {Array} data 待扫描数据
+	 * @return {Void}
 	 */
 	interlaceNone(data) {
 		let bytesPerPixel = Math.max(1, this.colors * this.bitDepth / 8); // 每像素字节数
@@ -271,6 +302,7 @@ class Png {
 	/**
 	 * Adam7扫描
 	 * @param  {Array} data 待扫描数据
+	 * @return {Void}
 	 */
 	interlaceAdam7(data) {
 		throw new Error('暂不支持Adam7扫描方式！');
@@ -284,6 +316,7 @@ class Png {
 	 * @param  {Number}  bytesPerRow   每行字节数
 	 * @param  {Number}  offset        偏移位置
 	 * @param  {Boolean} isReverse     是否反向解析
+	 * @return {Void}
 	 */
 	filterNone(scanline, pixelsBuffer, bytesPerPixel, bytesPerRow, offset, isReverse) {
 		for(let i=0; i<bytesPerRow; i++) {
@@ -300,6 +333,7 @@ class Png {
 	 * @param  {Number}  bytesPerRow   每行字节数
 	 * @param  {Number}  offset        偏移位置
 	 * @param  {Boolean} isReverse     是否反向解析
+	 * @return {Void}
 	 */
 	filterSub(scanline, pixelsBuffer, bytesPerPixel, bytesPerRow, offset, isReverse) {
 		for(let i=0; i<bytesPerRow; i++) {
@@ -325,6 +359,7 @@ class Png {
 	 * @param  {Number}  bytesPerRow   每行字节数
 	 * @param  {Number}  offset        偏移位置
 	 * @param  {Boolean} isReverse     是否反向解析
+	 * @return {Void}
 	 */
 	filterUp(scanline, pixelsBuffer, bytesPerPixel, bytesPerRow, offset, isReverse) {
 		if(offset < bytesPerRow) {
@@ -351,6 +386,7 @@ class Png {
 	 * @param  {Number}  bytesPerRow   每行字节数
 	 * @param  {Number}  offset        偏移位置
 	 * @param  {Boolean} isReverse     是否反向解析
+	 * @return {Void}
 	 */
 	filterAverage(scanline, pixelsBuffer, bytesPerPixel, bytesPerRow, offset, isReverse) {
 		if(offset < bytesPerRow) {
@@ -407,6 +443,7 @@ class Png {
 	 * @param  {Number}  bytesPerRow   每行字节数
 	 * @param  {Number}  offset        偏移位置
 	 * @param  {Boolean} isReverse     是否反向解析
+	 * @return {Void}
 	 */
 	filterPaeth(scanline, pixelsBuffer, bytesPerPixel, bytesPerRow, offset, isReverse) {
 		if(offset < bytesPerRow) {
@@ -455,3 +492,5 @@ class Png {
 	}
 
 }
+
+module.exports = Png;
