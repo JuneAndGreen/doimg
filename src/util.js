@@ -110,7 +110,7 @@ module.exports = {
 	 * @return {Array}        已解压数据      
 	 */
 	inflateSync(data) {
-		return zlib.inflate(new Buffer(data));
+		return zlib.inflateSync(new Buffer(data));
 	},
 
 	/**
@@ -119,7 +119,7 @@ module.exports = {
 	 * @return {Array}        已压缩数据
 	 */
 	deflateSync(data) {
-		return zlib.deflate(new Buffer(data));
+		return zlib.deflateSync(new Buffer(data));
 	},
 
 	validate() {

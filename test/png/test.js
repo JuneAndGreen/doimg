@@ -9,3 +9,7 @@ let png = new Png(file);
 
 console.log(png.width);
 console.log(png.height);
+
+let pixels = png.decode();
+
+console.log(pixels[10][10]);
