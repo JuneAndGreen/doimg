@@ -1,2 +1,5 @@
 # doimg
-An images tool for nodejs
+
+一个简单的图片处理工具
+
+但是未完成Orz……
