@@ -430,10 +430,10 @@ class Png {
 	 * pb = abs(p - b)
 	 * pc = abs(p - c)
 	 * if pa <= pb and pa <= pc then Pr = a
-   * else if pb <= pc then Pr = b
-   * else Pr = c
-   * return Pr
-   * 
+     * else if pb <= pc then Pr = b
+     * else Pr = c
+     * return Pr
+     * 
 	 * @param  {Array}   scanline      当前行带解析数据
 	 * @param  {Numver}  bytesPerPixel 每像素字节数
 	 * @param  {Number}  bytesPerRow   每行字节数
