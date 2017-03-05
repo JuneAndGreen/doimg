@@ -538,7 +538,7 @@ class Png {
 				return [pixelsBuffer[index], pixelsBuffer[index + 1], pixelsBuffer[index + 2], 255];
 			case 3: 
 				// 索引颜色图像
-				return [this.palette[pixelsBuffer[index] * 3 + 0], this.palette[pixelsBuffer[index] * 3 + 1],	this.palette[pixelsBuffer[index] * 3 + 2], 255];
+				return [this.palette[pixelsBuffer[index] * 3 + 0], this.palette[pixelsBuffer[index] * 3 + 1], this.palette[pixelsBuffer[index] * 3 + 2], 255];
 			case 4: 
 				// 灰度图像 + alpha通道
 				return [pixelsBuffer[index], pixelsBuffer[index], pixelsBuffer[index], pixelsBuffer[index + 1]];
