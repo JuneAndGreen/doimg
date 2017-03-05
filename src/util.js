@@ -31,7 +31,7 @@ module.exports = {
 	},
 
 	/**
-	 * 读取32位无符号整型数
+	 * 读取16位无符号整型数
 	 * @param  {Array}  buffer buffer数组
 	 * @param  {Number} offset 偏移量
 	 * @return {Number}        读取到的整型数
@@ -42,7 +42,7 @@ module.exports = {
 	},
 
 	/**
-	 * 读取32位无符号整型数
+	 * 读取8位无符号整型数
 	 * @param  {Array}  buffer buffer数组
 	 * @param  {Number} offset 偏移量
 	 * @return {Number}        读取到的整型数
