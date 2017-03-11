@@ -15,6 +15,8 @@
     "gif"
   ],
   "license": "MIT",
-  "devDependencies": {},
+  "devDependencies": {
+    "tooltpl": "0.0.3"
+  },
   "dependencies": {}
 }

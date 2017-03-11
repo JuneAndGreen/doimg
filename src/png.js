@@ -242,41 +242,46 @@ class Png {
 	 * @return {Void}
 	 */
 	decodeIDATChunks() {
-		let data = new Buffer(this.length);
+		let data = Buffer.alloc(this.length, 0xFF);
 		let index = 0;
 		this.dataChunks.forEach((chunk) => {
 			chunk.forEach((item) => {data[index++] = item});
 		});
 
+		let bytesPerPixel = Math.max(1, this.colors * this.bitDepth / 8); // 每像素字节数
+		let bytesPerRow = bytesPerPixel * this.width; // 每行字节数
+
 		// inflate解压缩
 		data = _.inflateSync(data);
-		if(this.interlaceMethod === 0){
-			this.interlaceNone(data);
+		if(this.interlaceMethod === 0) {
+			this.pixelsBuffer = this.interlaceNone(data, this.width, this.height, bytesPerPixel, bytesPerRow);
 		} else {
-			this.interlaceAdam7(data);
+			this.pixelsBuffer = this.interlaceAdam7(data, this.width, this.height, bytesPerPixel, bytesPerRow);
 		}
 	}
 
 	/**
 	 * 逐行扫描
-	 * @param  {Array} data 待扫描数据
-	 * @return {Void}
+	 * @param  {Array}  data           待扫描数据
+	 * @param  {Number} width          图像宽度
+	 * @param  {Number} height         图像高度
+	 * @param  {Number} bytesPerPixel  每像素字节数
+	 * @param  {Number} bytesPerRow    每行字节数
+	 * @return {Array}                 已解析图像数据
 	 */
-	interlaceNone(data) {
-		let bytesPerPixel = Math.max(1, this.colors * this.bitDepth / 8); // 每像素字节数
-		let bytesPerRow = bytesPerPixel * this.width; // 每行字节数
-
-		this.pixelsBuffer = new Buffer(bytesPerPixel * this.width * this.height);
+	interlaceNone(data, width, height, bytesPerPixel, bytesPerRow) {
+		let pixelsBuffer = Buffer.alloc(bytesPerPixel * width * height, 0xFF);
 		let offset = 0; // 当前行的偏移位置
 
 		// 逐行扫描解析
 		// https://www.w3.org/TR/PNG/#4Concepts.EncodingScanlineAbs
 		for(let i=0, len=data.length; i<len; i+=bytesPerRow+1) {
 			let scanline = Array.prototype.slice.call(data, i+1, i+bytesPerRow); // 当前行
-			let args = [scanline, bytesPerPixel, bytesPerRow, offset, true];
+			let args = [pixelsBuffer, scanline, bytesPerPixel, bytesPerRow, offset, true];
 
 			// 第一个字节代表过滤类型
-			switch(_.readInt8(data, i)) {
+			let filterType = _.readInt8(data, i);
+			switch(filterType) {
 				case 0:
 					this.filterNone.apply(this, args);
 					break;
@@ -298,19 +303,61 @@ class Png {
 
 			offset += bytesPerRow;
 		}
+
+		return pixelsBuffer;
 	}
 
 	/**
 	 * Adam7扫描
-	 * @param  {Array} data 待扫描数据
-	 * @return {Void}
+	 * @param  {Array}  data           待扫描数据
+	 * @param  {Number} width          图像宽度
+	 * @param  {Number} height         图像高度
+	 * @param  {Number} bytesPerPixel  每像素字节数
+	 * @param  {Number} bytesPerRow    每行字节数
+	 * @return {Array}                 已解析图像数据
 	 */
-	interlaceAdam7(data) {
-		throw new Error('暂不支持Adam7扫描方式！');
+	interlaceAdam7(data, width, height, bytesPerPixel, bytesPerRow) {
+		let pixelsBuffer = Buffer.alloc(bytesPerPixel * width * height, 0xFF);
+
+		let startX = [0, 0, 4, 0, 2, 0, 1];
+		let incX = [8, 8, 8, 4, 4, 2, 2];
+		let startY = [0, 4, 0, 2, 0, 1, 0];
+		let incY = [8, 8, 4, 4, 2, 2, 1];
+
+		let offset = 0;
+
+		// 7次扫描
+		for(let i=0; i<7; i++) {
+			// 子图像信息
+			let subWidth = Math.ceil((width - startY[i]) / incY[i], 10);
+			let subHeight = Math.ceil((height - startX[i]) / incX[i], 10);
+			let subBytesPerRow = bytesPerPixel * subWidth;
+			let offsetEnd = offset + (subBytesPerRow + 1) * subHeight;
+			let subData = Array.prototype.slice.call(data, offset, offsetEnd);
+
+			let subPixelsBuffer = this.interlaceNone(subData, subWidth, subHeight, bytesPerPixel, subBytesPerRow);
+			let subOffset = 0;
+
+			// 拷贝到正式图像数据位置
+			// https://www.w3.org/TR/PNG/#figure48
+			for(let x=startX[i]; x<height; x+=incX[i]) {
+				for(let y=startY[i]; y<width; y+=incY[i]) {
+					for(let z=0; z<bytesPerPixel; z++) {
+						pixelsBuffer[(x * width + y) * bytesPerPixel + z] = subPixelsBuffer[subOffset++] & 0xFF;
+					}
+				}
+			}
+
+			offset = offsetEnd;
+		}
+
+		return pixelsBuffer;
 	}
 
 	/**
 	 * 无过滤器
+	 *
+	 * @param  {Array}   pixelsBuffer  已经解析的图片数据
 	 * @param  {Array}   scanline      当前行带解析数据
 	 * @param  {Numver}  bytesPerPixel 每像素字节数
 	 * @param  {Number}  bytesPerRow   每行字节数
@@ -318,15 +365,17 @@ class Png {
 	 * @param  {Boolean} isReverse     是否反向解析
 	 * @return {Void}
 	 */
-	filterNone(scanline, bytesPerPixel, bytesPerRow, offset, isReverse) {
+	filterNone(pixelsBuffer, scanline, bytesPerPixel, bytesPerRow, offset, isReverse) {
 		for(let i=0; i<bytesPerRow; i++) {
-			this.pixelsBuffer[offset + i] = scanline[i];
+			pixelsBuffer[offset + i] = scanline[i] & 0xFF;
 		}
 	}
 
 	/**
 	 * Sub过滤器
 	 * 增量 --> Row(x - bytesPerPixel)
+	 *
+	 * @param  {Array}   pixelsBuffer  已经解析的图片数据
 	 * @param  {Array}   scanline      当前行带解析数据
 	 * @param  {Numver}  bytesPerPixel 每像素字节数
 	 * @param  {Number}  bytesPerRow   每行字节数
@@ -334,17 +383,17 @@ class Png {
 	 * @param  {Boolean} isReverse     是否反向解析
 	 * @return {Void}
 	 */
-	filterSub(scanline, bytesPerPixel, bytesPerRow, offset, isReverse) {
+	filterSub(pixelsBuffer, scanline, bytesPerPixel, bytesPerRow, offset, isReverse) {
 		for(let i=0; i<bytesPerRow; i++) {
 			if(i < bytesPerPixel) {
 				// 第一个像素，不作解析
-				this.pixelsBuffer[offset + i] = scanline[i];
+				pixelsBuffer[offset + i] = scanline[i] & 0xFF;
 			} else {
 				// 其他像素
-				let a = this.pixelsBuffer[offset + i - bytesPerPixel];
+				let a = pixelsBuffer[offset + i - bytesPerPixel];
 
 				let value = isReverse ? scanline[i] + a : scanline[i] - a;
-				this.pixelsBuffer[offset + i] = value & 0xFF;
+				pixelsBuffer[offset + i] = value & 0xFF;
 			}
 		}
 	}
@@ -352,6 +401,8 @@ class Png {
 	/**
 	 * Up过滤器
 	 * 增量 --> Row(x - bytesPerRow)
+	 *
+	 * @param  {Array}   pixelsBuffer  已经解析的图片数据
 	 * @param  {Array}   scanline      当前行带解析数据
 	 * @param  {Numver}  bytesPerPixel 每像素字节数
 	 * @param  {Number}  bytesPerRow   每行字节数
@@ -359,18 +410,18 @@ class Png {
 	 * @param  {Boolean} isReverse     是否反向解析
 	 * @return {Void}
 	 */
-	filterUp(scanline, bytesPerPixel, bytesPerRow, offset, isReverse) {
+	filterUp(pixelsBuffer, scanline, bytesPerPixel, bytesPerRow, offset, isReverse) {
 		if(offset < bytesPerRow) {
 			// 第一行，不作解析
 			for(let i=0; i<bytesPerRow; i++) {
-				this.pixelsBuffer[offset + i] = scanline[i];
+				pixelsBuffer[offset + i] = scanline[i] & 0xFF;
 			}
 		} else {
 			for(let i=0; i<bytesPerRow; i++) {
-				let b = this.pixelsBuffer[offset + i - bytesPerRow];
+				let b = pixelsBuffer[offset + i - bytesPerRow];
 
 				let value = isReverse ? scanline[i] + b : scanline[i] - b;
-				this.pixelsBuffer[offset + i] = value & 0xFF;
+				pixelsBuffer[offset + i] = value & 0xFF;
 			}
 		}
 	}
@@ -378,6 +429,8 @@ class Png {
 	/**
 	 * Average过滤器
 	 * 增量 --> floor((Row(x - bytesPerPixel) + Row(x - bytesPerRow)) / 2)
+	 *
+	 * @param  {Array}   pixelsBuffer  已经解析的图片数据
 	 * @param  {Array}   scanline      当前行带解析数据
 	 * @param  {Numver}  bytesPerPixel 每像素字节数
 	 * @param  {Number}  bytesPerRow   每行字节数
@@ -385,36 +438,36 @@ class Png {
 	 * @param  {Boolean} isReverse     是否反向解析
 	 * @return {Void}
 	 */
-	filterAverage(scanline, bytesPerPixel, bytesPerRow, offset, isReverse) {
+	filterAverage(pixelsBuffer, scanline, bytesPerPixel, bytesPerRow, offset, isReverse) {
 		if(offset < bytesPerRow) {
 			// 第一行，只做Sub
 			for(let i=0; i<bytesPerRow; i++) {
 				if(i < bytesPerPixel) {
 					// 第一个像素，不作解析
-					this.pixelsBuffer[offset + i] = scanline[i];
+					pixelsBuffer[offset + i] = scanline[i] & 0xFF;
 				} else {
 					// 其他像素
-					let a = this.pixelsBuffer[offset + i - bytesPerPixel];
+					let a = pixelsBuffer[offset + i - bytesPerPixel];
 
 					let value = isReverse ? scanline[i] + (a >> 1) : scanline[i] - (a >> 1); // 需要除以2
-					this.pixelsBuffer[offset + i] = value & 0xFF;
+					pixelsBuffer[offset + i] = value & 0xFF;
 				}
 			}
 		} else {
 			for(let i=0; i<bytesPerRow; i++) {
 				if(i < bytesPerPixel) {
 					// 第一个像素，只做Up
-					let b = this.pixelsBuffer[offset + i - bytesPerRow];
+					let b = pixelsBuffer[offset + i - bytesPerRow];
 
 					let value = isReverse ? scanline[i] + (b >> 1) : scanline[i] - (b >> 1); // 需要除以2
-					this.pixelsBuffer[offset + i] = value & 0xFF;
+					pixelsBuffer[offset + i] = value & 0xFF;
 				} else {
 					// 其他像素
-					let a = this.pixelsBuffer[offset + i - bytesPerPixel];
-					let b = this.pixelsBuffer[offset + i - bytesPerRow];
+					let a = pixelsBuffer[offset + i - bytesPerPixel];
+					let b = pixelsBuffer[offset + i - bytesPerRow];
 
 					let value = isReverse ? scanline[i] + ((a + b) >> 1) : scanline[i] - ((a + b) >> 1);
-					this.pixelsBuffer[offset + i] = value & 0xFF;
+					pixelsBuffer[offset + i] = value & 0xFF;
 				}
 			}
 		}
@@ -433,7 +486,8 @@ class Png {
      * else if pb <= pc then Pr = b
      * else Pr = c
      * return Pr
-     * 
+     *
+     * @param  {Array}   pixelsBuffer  已经解析的图片数据
 	 * @param  {Array}   scanline      当前行带解析数据
 	 * @param  {Numver}  bytesPerPixel 每像素字节数
 	 * @param  {Number}  bytesPerRow   每行字节数
@@ -441,34 +495,34 @@ class Png {
 	 * @param  {Boolean} isReverse     是否反向解析
 	 * @return {Void}
 	 */
-	filterPaeth(scanline, bytesPerPixel, bytesPerRow, offset, isReverse) {
+	filterPaeth(pixelsBuffer, scanline, bytesPerPixel, bytesPerRow, offset, isReverse) {
 		if(offset < bytesPerRow) {
 			// 第一行，只做Sub
 			for(let i=0; i<bytesPerRow; i++) {
 				if(i < bytesPerPixel) {
 					// 第一个像素，不作解析
-					this.pixelsBuffer[offset + i] = scanline[i];
+					pixelsBuffer[offset + i] = scanline[i] & 0xFF;
 				} else {
 					// 其他像素
-					let a = this.pixelsBuffer[offset + i - bytesPerPixel];
+					let a = pixelsBuffer[offset + i - bytesPerPixel];
 
 					let value = isReverse ? scanline[i] + a : scanline[i] - a;
-					this.pixelsBuffer[offset + i] = value & 0xFF;
+					pixelsBuffer[offset + i] = value & 0xFF;
 				}
 			}
 		} else {
 			for(let i=0; i<bytesPerRow; i++) {
 				if(i < bytesPerPixel) {
 					// 第一个像素，只做Up
-					let b = this.pixelsBuffer[offset + i - bytesPerRow];
+					let b = pixelsBuffer[offset + i - bytesPerRow];
 
 					let value = isReverse ? scanline[i] + b : scanline[i] - b;
-					this.pixelsBuffer[offset + i] = value & 0xFF;
+					pixelsBuffer[offset + i] = value & 0xFF;
 				} else {
 					// 其他像素
-					let a = this.pixelsBuffer[offset + i - bytesPerPixel];
-					let b = this.pixelsBuffer[offset + i - bytesPerRow];
-					let c = this.pixelsBuffer[offset + i - bytesPerRow - bytesPerPixel];
+					let a = pixelsBuffer[offset + i - bytesPerPixel];
+					let b = pixelsBuffer[offset + i - bytesPerRow];
+					let c = pixelsBuffer[offset + i - bytesPerRow - bytesPerPixel];
 
 					let p = a + b - c;
 					let pa = Math.abs(p - a);
@@ -481,7 +535,7 @@ class Png {
 					else pr = c;
 
 					let value = isReverse ? scanline[i] + pr : scanline[i] - pr;
-					this.pixelsBuffer[offset + i] = value & 0xFF;
+					pixelsBuffer[offset + i] = value & 0xFF;
 				}
 			}
 		}
@@ -525,7 +579,7 @@ class Png {
 		if(this.pixels && this.pixels[x][y]) return this.pixels[x][y];
 
 		let bytesPerPixel = Math.max(1, this.colors * this.bitDepth / 8); // 每像素字节数
-		let index = bytesPerPixel * ( y * this.width + x);
+		let index = bytesPerPixel * (y * this.width + x);
 
 		let pixelsBuffer = this.pixelsBuffer;
 
