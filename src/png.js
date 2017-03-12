@@ -276,7 +276,7 @@ class Png {
 		// 逐行扫描解析
 		// https://www.w3.org/TR/PNG/#4Concepts.EncodingScanlineAbs
 		for(let i=0, len=data.length; i<len; i+=bytesPerRow+1) {
-			let scanline = Array.prototype.slice.call(data, i+1, i+bytesPerRow); // 当前行
+			let scanline = data.slice(i+1, i+1+bytesPerRow); // 当前行
 			let args = [pixelsBuffer, scanline, bytesPerPixel, bytesPerRow, offset, true];
 
 			// 第一个字节代表过滤类型
@@ -333,7 +333,7 @@ class Png {
 			let subHeight = Math.ceil((height - startX[i]) / incX[i], 10);
 			let subBytesPerRow = bytesPerPixel * subWidth;
 			let offsetEnd = offset + (subBytesPerRow + 1) * subHeight;
-			let subData = Array.prototype.slice.call(data, offset, offsetEnd);
+			let subData = data.slice(offset, offsetEnd);
 
 			let subPixelsBuffer = this.interlaceNone(subData, subWidth, subHeight, bytesPerPixel, subBytesPerRow);
 			let subOffset = 0;

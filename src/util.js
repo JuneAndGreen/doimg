@@ -71,9 +71,9 @@ module.exports = {
 	 * @return {Array}        buffer数组
 	 */
 	stringToBuffer(str) {
-		let buffer = new Array(str.length);
+		let buffer = Buffer.alloc(str.length, 0xFF);
 		str.forEach((char, index) => {
-			buffer[index] = char.charCodeAt(0);
+			buffer[index] = char.charCodeAt(0) & 0xFF;
 		});
 
 		return buffer;
@@ -101,7 +101,7 @@ module.exports = {
 			throw new Error('读取的长度超出了buffer数组的界限！');
 		}
 
-		return Array.prototype.slice.call(buffer, begin, end);
+		return buffer.slice(begin, end);
 	},
 
 	/**
