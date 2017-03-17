@@ -5,7 +5,8 @@ const gen = require('tooltpl').generate;
 const Png = require('../../src/png');
 
 // let file = fs.readFileSync(__dirname + '/./test.png');
-let file = fs.readFileSync(__dirname + '/./test_adam7.png');
+// let file = fs.readFileSync(__dirname + '/./test_adam7.png');
+let file = fs.readFileSync(__dirname + '/./test_png8_index.png');
 
 let png = new Png(file);
 

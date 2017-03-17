@@ -129,6 +129,10 @@ class Png {
 			case 'IEND':
 				this.decodeIEND(chunkData);
 				break;
+			// 针对索引颜色，需要解析透明数据块
+			case 'tRNS':
+				this.decodetRNS(chunkData);
+				break;
 		}
 
 		return type;
@@ -196,6 +200,19 @@ class Png {
 		this.interlaceMethod = _.readInt8(chunk, 12);
 		if(this.interlaceMethod !== 0 && this.interlaceMethod !== 1) {
 			throw new Error('不合法的行扫描方法！');
+		}
+	}
+
+	/**
+	 * 解码tRNS数据块
+	 * https://www.w3.org/TR/PNG/#11tRNS
+	 * @param  {Array} chunk 数据块信息
+	 * @return {Void}
+	 */
+	decodetRNS(chunk) {
+		if(this.colorType === 3) {
+			// 目前只处理索引色透明的情况
+			this.transparentPanel = chunk;
 		}
 	}
 
@@ -592,7 +609,12 @@ class Png {
 				return [pixelsBuffer[index], pixelsBuffer[index + 1], pixelsBuffer[index + 2], 255];
 			case 3: 
 				// 索引颜色图像
-				return [this.palette[pixelsBuffer[index] * 3 + 0], this.palette[pixelsBuffer[index] * 3 + 1], this.palette[pixelsBuffer[index] * 3 + 2], 255];
+				let paletteIndex = pixelsBuffer[index];
+				
+				let transparent = this.transparentPanel[paletteIndex]
+				if(transparent === undefined) transparent = 255;
+
+				return [this.palette[paletteIndex * 3 + 0], this.palette[paletteIndex * 3 + 1], this.palette[paletteIndex * 3 + 2], transparent];
 			case 4: 
 				// 灰度图像 + alpha通道
 				return [pixelsBuffer[index], pixelsBuffer[index], pixelsBuffer[index], pixelsBuffer[index + 1]];
