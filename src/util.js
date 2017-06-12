@@ -53,6 +53,19 @@ module.exports = {
 	},
 
 	/**
+	 * 数字转8位二进制数组
+	 */
+	numberToArray(num) {
+		num = num.toString(2).split('');
+
+		while(num.length < 8) {
+			num.unshift(0);
+		}
+
+		return num.map(item => parseInt(item, 10));
+	},
+
+	/**
 	 * 将buffer数组转为字符串
 	 * @param  {Array}  buffer buffer数组
 	 * @return {String}        字符串
@@ -120,10 +133,5 @@ module.exports = {
 	 */
 	deflateSync(data) {
 		return zlib.deflateSync(new Buffer(data));
-	},
-
-	validate() {
-		
 	}
-
 };
