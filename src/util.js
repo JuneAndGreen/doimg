@@ -53,7 +53,24 @@ module.exports = {
 	},
 
 	/**
+	 * 数字转8位二进制字符串
+	 * @param {Number} num 输入数字
+	 * @return {String}    输出二进制字符串
+	 */
+	numberToString(num) {
+		num = num.toString(2).split('');
+
+		while(num.length < 8) {
+			num.unshift(0);
+		}
+
+		return num.join('');
+	},
+
+	/**
 	 * 数字转8位二进制数组
+	 * @param {Number} num 输入数字
+	 * @return {Array}     输出二进制数组
 	 */
 	numberToArray(num) {
 		num = num.toString(2).split('');
@@ -133,5 +150,5 @@ module.exports = {
 	 */
 	deflateSync(data) {
 		return zlib.deflateSync(new Buffer(data));
-	}
+	},
 };

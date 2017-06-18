@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title></title>
+    <style type="text/css">
+        .root \{
+            position: relative;
+            margin: 0 auto;
+        \}
+        #btn \{
+            position: absolute;
+            left: 0;
+            top: 0;
+            z-index: 50;
+            display: none;
+        \}
+        .cnt \{
+            position: absolute;
+            right: 0;
+            top: 0;
+
+            z-index: 10;
+        \}
+        .cnt-0 \{
+            z-index: 30;
+        \}
+        .cloumn \{
+            width: 2px;
+            float: left;
+        \}
+        .item \{
+            width: 2px;
+            height: 2px;
+
+            background: #fff;
+        \}
+    </style>
+</head>
+<body>
+    <div class="root" style="width: ${width * 2}px; height: ${height * 2}px;">
+        <button id="btn">播放</button>
+        ${str}
+    </div>
+
+    ${script}
+</body>
+</html>
