@@ -4,7 +4,8 @@ const fs = require('fs');
 const gen = require('tooltpl').generate;
 const Gif = require('../../src/gif');
 
-let file = fs.readFileSync(__dirname + '/./test.gif');
+// let file = fs.readFileSync(__dirname + '/./test.gif');
+let file = fs.readFileSync(__dirname + '/./test_interlace.gif');
 
 let gif = new Gif(file);
 
@@ -36,13 +37,24 @@ let script = `
 
             var now = 0;
             var count = 8;
+            var isPlay = false;
             btn.onclick = function() {
+                if (isPlay) return;
+
+                isPlay = true;
+                cnts[now].style.zIndex = 10;
+                now = 0;
+                cnts[now].style.zIndex = 30;
+
                 var next = function() {
                     requestAnimationFrame(function() {
+                        if (now === count - 1) {
+                            isPlay = false;
+                            return;
+                        };
+
                         cnts[now].style.zIndex = 10;
                         now++;
-
-                        if (now >= count) now = 0;
                         cnts[now].style.zIndex = 30;
 
                         next();

@@ -345,8 +345,10 @@ class Gif {
      * @param {Object} graphicsControlExtension 图形控制扩展
      * @return {Object}                         图片信息
      */
-    decodeDataBlocks(imageDescriptor, localColorTable, graphicsControlExtension) {
+    decodeDataBlocks(imageDescriptor, localColorTable, graphicsControlExtension = {}) {
         let LZWMinimumCodeSize = this.readBytes(1)[0];
+        let isTransparent = graphicsControlExtension.transparentColorFlag === 1;
+        let transparentIndex = graphicsControlExtension.transparentColorIndex;
 
         let buffer = [];
 
@@ -365,27 +367,21 @@ class Gif {
         // 转换像素色值
         let colorTable = localColorTable || this.globalColorTable;
         let pixelsBuffer = [];
-        let getColor = index => {
-            index = parseInt(index, 10);
-
-            // rgba 色值
-            return [
-                colorTable[index * 3],
-                colorTable[index * 3 + 1],
-                colorTable[index * 3 + 2],
-                1
-            ];
-        };
         output.forEach(index => {
             index = parseInt(index, 10);
 
-            // rgba 色值
-            pixelsBuffer.push([
-                colorTable[index * 3],
-                colorTable[index * 3 + 1],
-                colorTable[index * 3 + 2],
-                1
-            ]);
+            if (isTransparent && index === transparentIndex) {
+                // 透明
+                pixelsBuffer.push([255, 255, 255, 0]);
+            } else {
+                // rgba 色值
+                pixelsBuffer.push([
+                    colorTable[index * 3],
+                    colorTable[index * 3 + 1],
+                    colorTable[index * 3 + 2],
+                    1
+                ]);
+            }
         });
 
         // 扫描图片
@@ -405,8 +401,9 @@ class Gif {
             for (let pass = 0; pass < 4; pass++) {
                 for (let i = start[pass]; i < height; i += inc[pass]) {
                     let scanline = pixelsBuffer.slice(index, index + width);
+                    index = index + width;
                     for (let j = 0; j < width; j++) {
-                        pixels[i][j] = scanline[j];
+                        pixels[j][i] = scanline[j];
                     }
                 }
             }
