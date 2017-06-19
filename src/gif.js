@@ -347,8 +347,6 @@ class Gif {
      */
     decodeDataBlocks(imageDescriptor, localColorTable, graphicsControlExtension = {}) {
         let LZWMinimumCodeSize = this.readBytes(1)[0];
-        let isTransparent = graphicsControlExtension.transparentColorFlag === 1;
-        let transparentIndex = graphicsControlExtension.transparentColorIndex;
 
         let buffer = [];
 
@@ -370,18 +368,13 @@ class Gif {
         output.forEach(index => {
             index = parseInt(index, 10);
 
-            if (isTransparent && index === transparentIndex) {
-                // 透明
-                pixelsBuffer.push([255, 255, 255, 0]);
-            } else {
-                // rgba 色值
-                pixelsBuffer.push([
-                    colorTable[index * 3],
-                    colorTable[index * 3 + 1],
-                    colorTable[index * 3 + 2],
-                    1
-                ]);
-            }
+            // rgba 色值
+            pixelsBuffer.push([
+                colorTable[index * 3],
+                colorTable[index * 3 + 1],
+                colorTable[index * 3 + 2],
+                1
+            ]);
         });
 
         // 扫描图片
