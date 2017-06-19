@@ -5,16 +5,20 @@ const gen = require('tooltpl').generate;
 const Gif = require('../../src/gif');
 
 // let file = fs.readFileSync(__dirname + '/./test.gif');
-let file = fs.readFileSync(__dirname + '/./test_interlace.gif');
+// let file = fs.readFileSync(__dirname + '/./test_interlace.gif');
+// let file = fs.readFileSync(__dirname + '/./test2.gif');
+let file = fs.readFileSync(__dirname + '/./test2_interlace.gif');
 
 let gif = new Gif(file);
 
 let images = gif.decode();
 
 let str = '';
-
+let times = [];
 images.forEach((image, index) => {
-    str += '<div class="cnt cnt-' + index + '" style="width: ' + (image.width * 2) + 'px; height: ' + (image.height * 2) + 'px; background-color: #ccc;">';
+    times.push(image.delayTime * 10);
+
+    str += '<div class="cnt cnt-' + index + '" style="left: ' + (image.left * 2) + 'px; top: ' + (image.top * 2) + 'px; width: ' + (image.width * 2) + 'px; height: ' + (image.height * 2) + 'px;">';
 
     for(let i=0; i<image.width; i++) {
         str += '<div class="cloumn">';
@@ -36,8 +40,9 @@ let script = `
             btn.style.display = 'block';
 
             var now = 0;
-            var count = 8;
+            var count = ${images.length};
             var isPlay = false;
+            var times = [${times.join(', ')}];
             btn.onclick = function() {
                 if (isPlay) return;
 
@@ -46,22 +51,19 @@ let script = `
                 now = 0;
                 cnts[now].style.zIndex = 30;
 
-                var next = function() {
-                    requestAnimationFrame(function() {
-                        if (now === count - 1) {
-                            isPlay = false;
-                            return;
-                        };
-
-                        cnts[now].style.zIndex = 10;
+                var next = function(index) {
+                    setTimeout(function() {
+                        cnts[now].style.zIndex = now === 0 ? 20 : 10;
                         now++;
+
+                        if (now >= count) now = 0;
                         cnts[now].style.zIndex = 30;
 
-                        next();
-                    });
+                        next(now);
+                    }, times[index]);
                 };
 
-                next();
+                next(0);
             };
         };
     </script>

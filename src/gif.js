@@ -204,7 +204,7 @@ class Gif {
                 userInputFlag: packedField[6],
                 transparentColorFlag: packedField[7],
 
-                delayTime: _.readInt16(chunk, 4),
+                delayTime: parseInt(_.numberToString(_.readInt8(chunk, 5)) + _.numberToString(_.readInt8(chunk, 4)), 2),
                 transparentColorIndex: _.readInt8(chunk, 6) 
             }
         }
@@ -214,6 +214,8 @@ class Gif {
      * 解析图像标识符（Image Descriptor）
      * http://giflib.sourceforge.net/whatsinagif/bits_and_bytes.html#image_descriptor_block
      * @return {Object}  图像标识符
+     * @property {Number} left                   图像左边偏移
+     * @property {Number} top                    图像上边偏移
      * @property {Number} width                  图像宽度
      * @property {Number} height                 图像高度
      * @property {Number} localColorTableFlag    局部颜色列表标志，1表示紧接在图象标识符之后有一个局部颜色列表，供紧跟在它之后的一幅图象使用；0表示使用全局颜色列表
@@ -229,8 +231,8 @@ class Gif {
             packedField = _.numberToArray(packedField);
 
             return {
-                left: _.readInt16(chunk, 1),
-                top: _.readInt16(chunk, 3),
+                left: parseInt(_.numberToString(_.readInt8(chunk, 2)) + _.numberToString(_.readInt8(chunk, 1)), 2),
+                top: parseInt(_.numberToString(_.readInt8(chunk, 4)) + _.numberToString(_.readInt8(chunk, 3)), 2),
                 width: parseInt(_.numberToString(_.readInt8(chunk, 6)) + _.numberToString(_.readInt8(chunk, 5)), 2),
                 height: parseInt(_.numberToString(_.readInt8(chunk, 8)) + _.numberToString(_.readInt8(chunk, 7)), 2),
 
@@ -347,6 +349,8 @@ class Gif {
      */
     decodeDataBlocks(imageDescriptor, localColorTable, graphicsControlExtension = {}) {
         let LZWMinimumCodeSize = this.readBytes(1)[0];
+        let isTransparent = graphicsControlExtension.transparentColorFlag === 1;
+        let transparentIndex = graphicsControlExtension.transparentColorIndex;
 
         let buffer = [];
 
@@ -373,7 +377,7 @@ class Gif {
                 colorTable[index * 3],
                 colorTable[index * 3 + 1],
                 colorTable[index * 3 + 2],
-                1
+                isTransparent && index === transparentIndex ? 0 : 1
             ]);
         });
 
@@ -412,6 +416,7 @@ class Gif {
         }
 
         imageDescriptor.pixels = pixels;
+        Object.assign(imageDescriptor, graphicsControlExtension);
         return imageDescriptor;
     }
 
