@@ -15,16 +15,11 @@ class Png {
 
 		let optionsType = _.getType(options);
 
-		// 传入buffer数组，则做解码用
+		// 传入buffer数组，做解码用
 		if(optionsType === 'string') {
 			this.buffer = _.stringToBuffer(options);
 		} else if(optionsType === 'uint8array') {
 			this.buffer = new Uint8Array(options);
-		}
-
-		// 传入对象，则做编码用
-		if(optionsType === 'object') {
-			this.options = options;
 		}
 
 		if(this.buffer) this.decode(true); // 预解码
@@ -40,18 +35,6 @@ class Png {
 		this.index += length;
 
 		return buffer;
-	}
-
-	/**
-	 * 编码
-	 * @return {Void}
-	 */
-	encode() {
-		if(!this.options) {
-			throw new Error('不存在待编码数据！');
-		}
-
-		// TODO
 	}
 
 	/**

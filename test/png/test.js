@@ -2,7 +2,7 @@
 
 const fs = require('fs');
 const gen = require('tooltpl').generate;
-const Png = require('../../src/png');
+const Png = require('../../index').Png;
 
 let file = fs.readFileSync(__dirname + '/./test.png');
 // let file = fs.readFileSync(__dirname + '/./test_adam7.png');

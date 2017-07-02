@@ -2,12 +2,10 @@
 
 const fs = require('fs');
 const gen = require('tooltpl').generate;
-const Gif = require('../../src/gif');
+const Gif = require('../../index').Gif;
 
 // let file = fs.readFileSync(__dirname + '/./test.gif');
-// let file = fs.readFileSync(__dirname + '/./test_interlace.gif');
-// let file = fs.readFileSync(__dirname + '/./test2.gif');
-let file = fs.readFileSync(__dirname + '/./test2_interlace.gif');
+let file = fs.readFileSync(__dirname + '/./test_interlace.gif');
 
 let gif = new Gif(file);
 

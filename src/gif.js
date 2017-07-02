@@ -15,16 +15,11 @@ class Gif {
 
         let optionsType = _.getType(options);
 
-        // 传入buffer数组，则做解码用
+        // 传入buffer数组，做解码用
         if(optionsType === 'string') {
             this.buffer = _.stringToBuffer(options);
         } else if(optionsType === 'uint8array') {
             this.buffer = new Uint8Array(options);
-        }
-
-        // 传入对象，则做编码用
-        if(optionsType === 'object') {
-            this.options = options;
         }
 
         if(this.buffer) this.decode(true); // 预解码
@@ -40,18 +35,6 @@ class Gif {
         this.index += length;
 
         return buffer;
-    }
-
-    /**
-     * 编码
-     * @return {Void}
-     */
-    encode() {
-        if(!this.options) {
-            throw new Error('不存在待编码数据！');
-        }
-
-        // TODO
     }
 
     /**
@@ -130,7 +113,7 @@ class Gif {
         let packedField = _.readInt8(chunk, 4);
         packedField = _.numberToArray(packedField);
         this.globalColorTableFlag = packedField[0]; // 全局颜色列表标志(Global Color Table Flag)，当置位时表示有全局颜色列表
-        this.bitDepth = parseInt(`${packedField[1]}${packedField[2]}${packedField[3]}`, 2); // 颜色深度
+        this.bitDepth = parseInt(`${packedField[1]}${packedField[2]}${packedField[3]}`, 2); // 图像深度
         this.sortFlag = packedField[4]; // 分类标志(Sort Flag)，如果置位表示全局颜色列表分类排列
         this.globalColorTableSize = parseInt(`${packedField[5]}${packedField[6]}${packedField[7]}`, 2); // 全局颜色列表大小
 
@@ -361,7 +344,6 @@ class Gif {
 
             next = this.readBytes(1)[0];
         }
-
 
         // LZW解压缩
         let output = this.lzwDecode(LZWMinimumCodeSize, buffer);
