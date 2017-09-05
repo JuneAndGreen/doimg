@@ -455,7 +455,7 @@ class Jpeg {
         let output = [];
 
         for (let i=0; i < 64; i++) {
-            if (!isReverse) {
+            if (isReverse) {
                 output[i] = input[ZIG_ZAG[i]];
             } else {
                 output[ZIG_ZAG[i]] = input[i];
@@ -842,7 +842,7 @@ class Jpeg {
                 output = this.quantify(output, colorComponentId, true);
 
                 // zig-zag反编码
-                output = this.zigZag(output, false);
+                output = this.zigZag(output, true);
 
                 // 转矩阵
                 output = _.arrayToMatrix(output, 8, 8);
