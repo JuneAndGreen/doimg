@@ -1,7 +1,5 @@
 'use strict';
 
-const zlib = require('zlib');
-
 module.exports = {
 	/**
 	 * 判断两个数组是否相等
@@ -10,10 +8,10 @@ module.exports = {
 	 * @return {Boolean}   判断结果
 	 */
 	equal(a, b) {
-		if(a.length !== b.length) return false;
+		if (a.length !== b.length) return false;
 
-		for(let i=0, len=a.length; i<len; i++) {
-			if(a[i] !== b[i]) return false;
+		for (let i = 0, len = a.length; i < len; i++) {
+			if (a[i] !== b[i]) return false;
 		}
 
 		return true;
@@ -60,7 +58,7 @@ module.exports = {
 	numberToString(num) {
 		num = num.toString(2).split('');
 
-		while(num.length < 8) {
+		while (num.length < 8) {
 			num.unshift(0);
 		}
 
@@ -75,7 +73,7 @@ module.exports = {
 	numberToArray(num) {
 		num = num.toString(2).split('');
 
-		while(num.length < 8) {
+		while (num.length < 8) {
 			num.unshift(0);
 		}
 
@@ -89,7 +87,7 @@ module.exports = {
 	 */
 	bufferToString(buffer) {
 		let str = '';
-		for(let i=0, len=buffer.length; i<len; i++){
+		for (let i = 0, len = buffer.length; i < len; i++){
 			str += String.fromCharCode(buffer[i]);
 		}
 		return str;
@@ -127,7 +125,7 @@ module.exports = {
 	 */
 	readBytes(buffer, begin, length) {
 		let end = begin + length;
-		if(end > buffer.length) {
+		if (end > buffer.length) {
 			throw new Error('读取的长度超出了buffer数组的界限！');
 		}
 
@@ -135,20 +133,72 @@ module.exports = {
 	},
 
 	/**
-	 * inflate解压缩算法封装
-	 * @param  {Array}  data  待解压数据
-	 * @return {Array}        已解压数据      
+	 * 重复字符串若干次
+	 * @param  {String} str   待重复字符串
+	 * @param  {Number} count 重复次数
+	 * @return {Sting}        已重复字符串
 	 */
-	inflateSync(data) {
-		return zlib.inflateSync(new Buffer(data));
+	repeatString(str, count) {
+		return (new Array(count + 1)).join(str);
 	},
 
 	/**
-	 * deflate压缩算法封装
-	 * @param  {Array}  data  待压缩数据
-	 * @return {Array}        已压缩数据
+	 * 矩阵相乘
+	 * @param  {Array} a 矩阵a
+	 * @param  {Array} b 矩阵b
+	 * @return {Array}   输出矩阵
 	 */
-	deflateSync(data) {
-		return zlib.deflateSync(new Buffer(data));
+	multiplyMatrix(a, b) {
+		let output = [];
+		let rows = a[0].length;
+		let columns = b.length;
+		for (let i = 0; i < columns; i++) {
+			output[i] = [];
+			for (let j = 0; j < rows; j++) {
+				let value = 0;
+				for (let x = 0; x < a.length; x++) {
+					value += a[x][j] * b[i][x];
+				}
+
+				output[i][j] = value;
+			}
+		}
+
+		return output;
+	},
+
+	/**
+	 * 一维数组转矩阵
+	 * @param  {Array}  input  输入一维数组
+	 * @param  {Number} width  输出矩阵的宽度
+	 * @param  {Number} height 输出矩阵的高度
+	 * @return {Array}         输出矩阵
+	 */
+	arrayToMatrix(input, w, h) {
+		let output = [];
+		for (let i = 0; i < w; i++) {
+			output[i] = [];
+			for (let j = 0; j < h; j++) {
+				output[i][j] = input[j * w + i];
+			}
+		}
+
+		return output;
+	},
+
+	/**
+	 * 矩阵转一维数组
+	 * @param  {Array}  input  输入矩阵
+	 * @return {Array}         输出一维数组
+	 */
+	matrixToArray(input) {
+		let output = [];
+		for (let i = 0, w = input.length; i < w; i++) {
+			for (let j = 0, h = input[i].length; j < h; j++) {
+				output.push(input[i][j]);
+			}
+		}
+
+		return output;
 	},
 };

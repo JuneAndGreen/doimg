@@ -1,5 +1,6 @@
 'use strict';
 
+const zlib = require('zlib');
 const _ = require('./util');
 
 const DEFAULT = {
@@ -16,13 +17,11 @@ class Png {
 		let optionsType = _.getType(options);
 
 		// 传入buffer数组，做解码用
-		if(optionsType === 'string') {
-			this.buffer = _.stringToBuffer(options);
-		} else if(optionsType === 'uint8array') {
+		if (optionsType === 'uint8array') {
 			this.buffer = new Uint8Array(options);
 		}
 
-		if(this.buffer) this.decode(true); // 预解码
+		if (this.buffer) this.decode(true); // 预解码
 	}
 
 	/**
@@ -43,7 +42,7 @@ class Png {
 	 * @return {Array}                       像素数组
 	 */
 	decode(onlyDecodePngInfo) {
-		if(!this.buffer) {
+		if (!this.buffer) {
 			throw new Error('不存在待解码数据！');
 		}
 
@@ -51,11 +50,13 @@ class Png {
 
 		this.decodeChunk(); // 解析IHDR数据块
 
-		if(!onlyDecodePngInfo) {
-			while(this.index < this.buffer.length) {
+		if (!onlyDecodePngInfo) {
+			if (this.pixels) return this.getPixels();
+
+			while (this.index < this.buffer.length) {
 				// 继续解析其他数据块
 				let type = this.decodeChunk();
-				if(type === 'IEND') break;
+				if (type === 'IEND') break;
 			}
 
 			this.decodeIDATChunks();
@@ -69,14 +70,14 @@ class Png {
 	 * @return {Void}
 	 */
 	decodeHeader() {
-		if(this.header) return;
+		if (this.header) return;
 
-		if(this.index !== 0) {
+		if (this.index !== 0) {
 			throw new Error('png的index属性指向非0！');
 		}
 
 		let header = this.readBytes(8);
-		if(!_.equal(header, DEFAULT.header)) {
+		if (!_.equal(header, DEFAULT.header)) {
 			throw new Error('png的签名信息不合法！')
 		}
 
@@ -91,7 +92,7 @@ class Png {
 	decodeChunk() {
 		let length = _.readInt32(this.readBytes(4)); // 数据块长度
 
-		if(length < 0) {
+		if (length < 0) {
 			throw new Error('不合法的数据块长度信息');
 		}
 
@@ -99,7 +100,7 @@ class Png {
 		let chunkData = this.readBytes(length);
 		let crc = this.readBytes(4); // crc冗余校验码
 
-		switch(type) {
+		switch (type) {
 			case 'IHDR':
 				this.decodeIHDR(chunkData);
 				break;
@@ -133,14 +134,14 @@ class Png {
 
 		// 图像深度，即每个通道包含的位数
 		this.bitDepth = _.readInt8(chunk, 8);
-		if([1, 2, 4, 8, 16].indexOf(this.bitDepth) === -1) {
+		if ([1, 2, 4, 8, 16].indexOf(this.bitDepth) === -1) {
 			throw new Error('不合法的图像深度！');
 		}
 
 		// 颜色类型
 		// 其中 this.colors 代表每个像素数据包含的颜色数量信息
 		this.colorType = _.readInt8(chunk, 9);
-		switch(this.colorType) {
+		switch (this.colorType) {
 			case 0:
 				// 灰度图像
 				this.colors = 1; 
@@ -169,19 +170,19 @@ class Png {
 
 		// 压缩方法
 		this.compressionMethod = _.readInt8(chunk, 10);
-		if(this.compressionMethod !== 0) {
+		if (this.compressionMethod !== 0) {
 			throw new Error('不合法的压缩方法！');
 		}
 
 		// 过滤器方法
 		this.filterMethod = _.readInt8(chunk, 11);
-		if(this.filterMethod !== 0) {
+		if (this.filterMethod !== 0) {
 			throw new Error('不合法的过滤器方法！');
 		}
 
 		// 行扫描方法
 		this.interlaceMethod = _.readInt8(chunk, 12);
-		if(this.interlaceMethod !== 0 && this.interlaceMethod !== 1) {
+		if (this.interlaceMethod !== 0 && this.interlaceMethod !== 1) {
 			throw new Error('不合法的行扫描方法！');
 		}
 	}
@@ -193,7 +194,7 @@ class Png {
 	 * @return {Void}
 	 */
 	decodetRNS(chunk) {
-		if(this.colorType === 3) {
+		if (this.colorType === 3) {
 			// 目前只处理索引色透明的情况
 			this.transparentPanel = chunk;
 		}
@@ -206,10 +207,10 @@ class Png {
 	 * @return {Void}
 	 */
 	decodePLTE(chunk) {
-		if(chunk.length % 3 !== 0) {
+		if (chunk.length % 3 !== 0) {
 			throw new Error('不合法的PLTE数据块长度！');
 		}
-		if(chunk.length > (Math.pow(2, this.bitDepth) * 3)) {
+		if (chunk.length > (Math.pow(2, this.bitDepth) * 3)) {
 			throw new Error('调色板颜色数量不能超过图像深度规定的颜色数');
 		}
 
@@ -252,8 +253,8 @@ class Png {
 		let bytesPerRow = bytesPerPixel * this.width; // 每行字节数
 
 		// inflate解压缩
-		data = _.inflateSync(data);
-		if(this.interlaceMethod === 0) {
+		data = this.inflateSync(data);
+		if (this.interlaceMethod === 0) {
 			this.pixelsBuffer = this.interlaceNone(data, this.width, this.height, bytesPerPixel, bytesPerRow);
 		} else {
 			this.pixelsBuffer = this.interlaceAdam7(data, this.width, this.height, bytesPerPixel, bytesPerRow);
@@ -275,13 +276,13 @@ class Png {
 
 		// 逐行扫描解析
 		// https://www.w3.org/TR/PNG/#4Concepts.EncodingScanlineAbs
-		for(let i=0, len=data.length; i<len; i+=bytesPerRow+1) {
+		for (let i = 0, len = data.length; i < len; i += bytesPerRow + 1) {
 			let scanline = data.slice(i+1, i+1+bytesPerRow); // 当前行
 			let args = [pixelsBuffer, scanline, bytesPerPixel, bytesPerRow, offset, true];
 
 			// 第一个字节代表过滤类型
 			let filterType = _.readInt8(data, i);
-			switch(filterType) {
+			switch (filterType) {
 				case 0:
 					this.filterNone.apply(this, args);
 					break;
@@ -327,7 +328,7 @@ class Png {
 		let offset = 0;
 
 		// 7次扫描
-		for(let i=0; i<7; i++) {
+		for (let i = 0; i < 7; i++) {
 			// 子图像信息
 			let subWidth = Math.ceil((width - startY[i]) / incY[i], 10);
 			let subHeight = Math.ceil((height - startX[i]) / incX[i], 10);
@@ -340,9 +341,9 @@ class Png {
 
 			// 拷贝到正式图像数据位置
 			// https://www.w3.org/TR/PNG/#figure48
-			for(let x=startX[i]; x<height; x+=incX[i]) {
-				for(let y=startY[i]; y<width; y+=incY[i]) {
-					for(let z=0; z<bytesPerPixel; z++) {
+			for (let x = startX[i]; x < height; x += incX[i]) {
+				for (let y = startY[i]; y < width; y += incY[i]) {
+					for (let z = 0; z < bytesPerPixel; z++) {
 						pixelsBuffer[(x * width + y) * bytesPerPixel + z] = subPixelsBuffer[subOffset++] & 0xFF;
 					}
 				}
@@ -366,7 +367,7 @@ class Png {
 	 * @return {Void}
 	 */
 	filterNone(pixelsBuffer, scanline, bytesPerPixel, bytesPerRow, offset, isReverse) {
-		for(let i=0; i<bytesPerRow; i++) {
+		for (let i = 0; i < bytesPerRow; i++) {
 			pixelsBuffer[offset + i] = scanline[i] & 0xFF;
 		}
 	}
@@ -384,8 +385,8 @@ class Png {
 	 * @return {Void}
 	 */
 	filterSub(pixelsBuffer, scanline, bytesPerPixel, bytesPerRow, offset, isReverse) {
-		for(let i=0; i<bytesPerRow; i++) {
-			if(i < bytesPerPixel) {
+		for (let i = 0; i < bytesPerRow; i++) {
+			if (i < bytesPerPixel) {
 				// 第一个像素，不作解析
 				pixelsBuffer[offset + i] = scanline[i] & 0xFF;
 			} else {
@@ -411,13 +412,13 @@ class Png {
 	 * @return {Void}
 	 */
 	filterUp(pixelsBuffer, scanline, bytesPerPixel, bytesPerRow, offset, isReverse) {
-		if(offset < bytesPerRow) {
+		if (offset < bytesPerRow) {
 			// 第一行，不作解析
-			for(let i=0; i<bytesPerRow; i++) {
+			for (let i = 0; i < bytesPerRow; i++) {
 				pixelsBuffer[offset + i] = scanline[i] & 0xFF;
 			}
 		} else {
-			for(let i=0; i<bytesPerRow; i++) {
+			for (let i = 0; i < bytesPerRow; i++) {
 				let b = pixelsBuffer[offset + i - bytesPerRow];
 
 				let value = isReverse ? scanline[i] + b : scanline[i] - b;
@@ -439,10 +440,10 @@ class Png {
 	 * @return {Void}
 	 */
 	filterAverage(pixelsBuffer, scanline, bytesPerPixel, bytesPerRow, offset, isReverse) {
-		if(offset < bytesPerRow) {
+		if (offset < bytesPerRow) {
 			// 第一行，只做Sub
-			for(let i=0; i<bytesPerRow; i++) {
-				if(i < bytesPerPixel) {
+			for (let i = 0; i < bytesPerRow; i++) {
+				if (i < bytesPerPixel) {
 					// 第一个像素，不作解析
 					pixelsBuffer[offset + i] = scanline[i] & 0xFF;
 				} else {
@@ -454,8 +455,8 @@ class Png {
 				}
 			}
 		} else {
-			for(let i=0; i<bytesPerRow; i++) {
-				if(i < bytesPerPixel) {
+			for (let i = 0; i < bytesPerRow; i++) {
+				if (i < bytesPerPixel) {
 					// 第一个像素，只做Up
 					let b = pixelsBuffer[offset + i - bytesPerRow];
 
@@ -496,10 +497,10 @@ class Png {
 	 * @return {Void}
 	 */
 	filterPaeth(pixelsBuffer, scanline, bytesPerPixel, bytesPerRow, offset, isReverse) {
-		if(offset < bytesPerRow) {
+		if (offset < bytesPerRow) {
 			// 第一行，只做Sub
-			for(let i=0; i<bytesPerRow; i++) {
-				if(i < bytesPerPixel) {
+			for (let i = 0; i < bytesPerRow; i++) {
+				if (i < bytesPerPixel) {
 					// 第一个像素，不作解析
 					pixelsBuffer[offset + i] = scanline[i] & 0xFF;
 				} else {
@@ -511,8 +512,8 @@ class Png {
 				}
 			}
 		} else {
-			for(let i=0; i<bytesPerRow; i++) {
-				if(i < bytesPerPixel) {
+			for (let i = 0; i < bytesPerRow; i++) {
+				if (i < bytesPerPixel) {
 					// 第一个像素，只做Up
 					let b = pixelsBuffer[offset + i - bytesPerRow];
 
@@ -542,22 +543,40 @@ class Png {
 	}
 
 	/**
+	 * inflate解压缩算法封装
+	 * @param  {Array}  data  待解压数据
+	 * @return {Array}        已解压数据      
+	 */
+	inflateSync(data) {
+		return zlib.inflateSync(new Buffer(data));
+	}
+
+	/**
+	 * deflate压缩算法封装
+	 * @param  {Array}  data  待压缩数据
+	 * @return {Array}        已压缩数据
+	 */
+	deflateSync(data) {
+		return zlib.deflateSync(new Buffer(data));
+	}
+
+	/**
 	 * 获取像素数组
 	 * @return {Array} 像素数组
 	 */
 	getPixels() {
-		if(this.pixels) return pixels;
+		if (this.pixels) return pixels;
 
-		if(!this.pixelsBuffer) {
+		if (!this.pixelsBuffer) {
 			throw new Error('像素数据还没有解析！');
 		}
 
 		let pixels = this.pixels = new Array(this.width);
 
-		for(let i=0; i<this.width; i++) {
+		for (let i = 0; i < this.width; i++) {
 			pixels[i] = new Array(this.height);
 
-			for(let j=0; j<this.height; j++) {
+			for(let j = 0; j < this.height; j++) {
 				pixels[i][j] = this.getPixel(i, j);
 			}
 		}
@@ -572,18 +591,18 @@ class Png {
 	 * @return {Array}    rgba色值
 	 */
 	getPixel(x, y) {
-		if(x < 0 || x >= this.width || y < 0 || y >= this.height) {
+		if (x < 0 || x >= this.width || y < 0 || y >= this.height) {
 			throw new Error('x或y的值超出了图像边界！');
 		}
 
-		if(this.pixels && this.pixels[x][y]) return this.pixels[x][y];
+		if (this.pixels && this.pixels[x][y]) return this.pixels[x][y];
 
 		let bytesPerPixel = Math.max(1, this.colors * this.bitDepth / 8); // 每像素字节数
 		let index = bytesPerPixel * (y * this.width + x);
 
 		let pixelsBuffer = this.pixelsBuffer;
 
-		switch(this.colorType) {
+		switch (this.colorType) {
 			case 0: 
 				// 灰度图像
 				return [pixelsBuffer[index], pixelsBuffer[index], pixelsBuffer[index], 255];
@@ -595,7 +614,7 @@ class Png {
 				let paletteIndex = pixelsBuffer[index];
 				
 				let transparent = this.transparentPanel[paletteIndex]
-				if(transparent === undefined) transparent = 255;
+				if (transparent === undefined) transparent = 255;
 
 				return [this.palette[paletteIndex * 3 + 0], this.palette[paletteIndex * 3 + 1], this.palette[paletteIndex * 3 + 2], transparent];
 			case 4: 

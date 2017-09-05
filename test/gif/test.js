@@ -4,8 +4,8 @@ const fs = require('fs');
 const gen = require('tooltpl').generate;
 const Gif = require('../../index').Gif;
 
-// let file = fs.readFileSync(__dirname + '/./test.gif');
-let file = fs.readFileSync(__dirname + '/./test_interlace.gif');
+let file = fs.readFileSync(__dirname + '/./test.gif');
+// let file = fs.readFileSync(__dirname + '/./test_interlace.gif');
 
 let gif = new Gif(file);
 
@@ -18,9 +18,9 @@ images.forEach((image, index) => {
 
     str += '<div class="cnt cnt-' + index + '" style="left: ' + (image.left * 2) + 'px; top: ' + (image.top * 2) + 'px; width: ' + (image.width * 2) + 'px; height: ' + (image.height * 2) + 'px;">';
 
-    for(let i=0; i<image.width; i++) {
+    for (let i = 0; i < image.width; i++) {
         str += '<div class="cloumn">';
-        for(let j=0; j<image.height; j++) {
+        for (let j = 0; j < image.height; j++) {
             str += '<div class="item" style="background: rgba(' + image.pixels[i][j].join(',') + ')"></div>';
         }
         str += '</div>';

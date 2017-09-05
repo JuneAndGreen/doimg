@@ -16,13 +16,11 @@ class Gif {
         let optionsType = _.getType(options);
 
         // 传入buffer数组，做解码用
-        if(optionsType === 'string') {
-            this.buffer = _.stringToBuffer(options);
-        } else if(optionsType === 'uint8array') {
+        if (optionsType === 'uint8array') {
             this.buffer = new Uint8Array(options);
         }
 
-        if(this.buffer) this.decode(true); // 预解码
+        if (this.buffer) this.decode(true); // 预解码
     }
 
     /**
@@ -43,7 +41,7 @@ class Gif {
      * @return {Array}                       像素数组
      */
     decode(onlyDecodeGifInfo) {
-        if(!this.buffer) {
+        if (!this.buffer) {
             throw new Error('不存在待解码数据！');
         }
 
@@ -51,7 +49,9 @@ class Gif {
 
         this.decodeLCD(); // 解析逻辑屏幕标志符
 
-        if(!onlyDecodeGifInfo && !this.hasDecode) {
+        if (!onlyDecodeGifInfo) {
+            if (this.hasDecode) return this.images;
+
             this.decodeGCT(); // 解析全局颜色列表
 
             while (!this.isEnd()) {
@@ -79,14 +79,14 @@ class Gif {
      * @return {Void}
      */
     decodeHeader() {
-        if(this.header) return;
+        if (this.header) return;
 
-        if(this.index !== 0) {
+        if (this.index !== 0) {
             throw new Error('gif的index属性指向非0！');
         }
 
         let header = this.readBytes(6);
-        if(_.equal(header, DEFAULT.header_89a)) {
+        if (_.equal(header, DEFAULT.header_89a)) {
             this.is89a = true;
         } else if (_.equal(header, DEFAULT.header_87a)) {
             this.is87a = true;
