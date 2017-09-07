@@ -9,7 +9,6 @@ let file = fs.readFileSync(__dirname + '/./test.jpeg');
 let jpeg = new Jpeg(file);
 
 let pixels = jpeg.decode();
-// console.log(pixels)
 
 let str = '';
 

@@ -2,8 +2,6 @@
 
 一个简单的图片解码工具
 
-但是未完成Orz……
-
 ## png解码器
 
 ```js
@@ -39,7 +37,7 @@ console.log(firstImg.left); // 图像左边偏移
 console.log(firstImg.top); // 图像上边偏移
 console.log(firstImg.width); // 图像宽度
 console.log(firstImg.height); // 图像高度
-console.log(firstImg.disposalMethod); // 处置方法，0 - 不使用处置方法，1 - 不处置图形，把图形从当前位置移去，2 - 回复到背景色，3 - 回复到先前状态，4-7 - 自定义
+console.log(firstImg.disposalMethod); // 处置方法，0 - 不使用处置方法，1 - 不处置图形，把图形从当前位置移去，2 - 回复到背景色，3 - 回复到先前状态
 console.log(firstImg.userInputFlag); // 用户输入标志，指出是否期待用户有输入之后才继续进行下去，0 - 不期待，1 - 期待
 console.log(firstImg.delayTime); // 延迟时间，单位1／100秒
 ```

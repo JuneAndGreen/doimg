@@ -1,6 +1,6 @@
 {
   "name": "doimg",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "an images decoding tool for nodejs",
   "author": "june_01",
   "main": "index.js",
