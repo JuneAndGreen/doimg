@@ -14,10 +14,8 @@ class Png {
 		this.dataChunks = []; // 图像数据chunk数组
 		this.length = 0; // 数据总长度
 
-		let optionsType = _.getType(options);
-
-		// 传入buffer数组，做解码用
-		if (optionsType === 'uint8array') {
+		if (_.getType(options) === 'uint8array') {
+			// 传入buffer数组，做解码用
 			this.buffer = new Uint8Array(options);
 		}
 

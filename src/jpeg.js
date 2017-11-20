@@ -57,10 +57,8 @@ class Jpeg {
         this.index = 0; // 解码游标
         this.data = []; // 图像数据
 
-        let optionsType = _.getType(options);
-
-        // 传入buffer数组，做解码用
-        if (optionsType === 'uint8array') {
+        if (_.getType(options) === 'uint8array') {
+            // 传入buffer数组，做解码用
             this.buffer = new Uint8Array(options);
         }
 
