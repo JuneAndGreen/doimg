@@ -4,23 +4,21 @@
     <title></title>
     <style type="text/css">
         .cnt \{
-            margin: 0 auto;
+            display: flex;
+            align-items: center;
         \}
-        .cloumn \{
-            width: 2px;
-            float: left;
-        \}
-        .item \{
-            width: 2px;
-            height: 2px;
 
-            background: #fff;
+        .canvas \{
+            margin-left: 30px;
         \}
     </style>
 </head>
 <body>
-    <div class="cnt" style="width: ${width * 2}px; height: ${height * 2}px; background-color: #ccc;">
-        ${str}
+    <div class="cnt">
+        ${canvas}
     </div>
+    <script>
+        ${script}
+    </script>
 </body>
 </html>

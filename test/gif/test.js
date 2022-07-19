@@ -1,77 +1,96 @@
-'use strict';
-
 const fs = require('fs');
 const gen = require('tooltpl').generate;
 const Gif = require('../../index').Gif;
 
-let file = fs.readFileSync(__dirname + '/./test.gif');
-// let file = fs.readFileSync(__dirname + '/./test_interlace.gif');
+const file1 = fs.readFileSync(__dirname + '/./test.gif');
+const file2 = fs.readFileSync(__dirname + '/./test_interlace.gif');
 
-let gif = new Gif(file);
-
-let images = gif.decode();
-
-let str = '';
-let times = [];
-images.forEach((image, index) => {
-    times.push(image.delayTime * 10);
-
-    str += '<div class="cnt cnt-' + index + '" style="left: ' + (image.left * 2) + 'px; top: ' + (image.top * 2) + 'px; width: ' + (image.width * 2) + 'px; height: ' + (image.height * 2) + 'px;">';
-
-    for (let i = 0; i < image.width; i++) {
-        str += '<div class="cloumn">';
-        for (let j = 0; j < image.height; j++) {
-            str += '<div class="item" style="background: rgba(' + image.pixels[i][j].join(',') + ')"></div>';
-        }
-        str += '</div>';
-    }
-
-    str += '</div>';
-})
-
-let tpl = fs.readFileSync(__dirname + '/./tpl.html', {encoding: 'utf8'});
+let canvas = '';
 let script = `
-    <script type="text/javascript">
-        window.onload = function() {
-            var btn = document.getElementById('btn');
-            var cnts = document.querySelectorAll('.cnt');
-            btn.style.display = 'block';
+    var btn = document.getElementById('btn');
+    var isPlay = false;
+    btn.onclick = function() {
+        if (isPlay) return;
 
-            var now = 0;
-            var count = ${images.length};
-            var isPlay = false;
-            var times = [${times.join(', ')}];
-            btn.onclick = function() {
-                if (isPlay) return;
-
-                isPlay = true;
-                cnts[now].style.zIndex = 10;
-                now = 0;
-                cnts[now].style.zIndex = 30;
-
-                var next = function(index) {
-                    setTimeout(function() {
-                        cnts[now].style.zIndex = now === 0 ? 20 : 10;
-                        now++;
-
-                        if (now >= count) now = 0;
-                        cnts[now].style.zIndex = 30;
-
-                        next(now);
-                    }, times[index]);
-                };
-
-                next(0);
-            };
-        };
-    </script>
+        isPlay = true;
+        window.play0();
+        window.play1();
+    };
 `;
+const fileList = [file1, file2];
 
-let html = gen(tpl, {
-    str,
+fileList.forEach((file, index) => {
+    const gif = new Gif(file);
+    const images = gif.decode();
+
+    const { width, height } = gif;
+    const delayTimeList = [];
+    const count = images.length;
+
+    let subScript = ''
+    images.forEach(image => {
+        const { pixels, delayTime, left, top, width, height } = image;
+        const arr = [];
+
+        for (let i = 0; i < height; i++) {
+            for (let j = 0; j < width; j++) {
+                const pixel = pixels[j][i];
+                pixel[3] *= 255;
+                arr.push(pixel.join(','));
+            }
+        }
+
+        subScript += `
+            list.push({
+                image: new ImageData(Uint8ClampedArray.from([${arr.join(',')}]), ${width}, ${height}),
+                left: ${left},
+                top: ${top},
+                width: ${width},
+                height: ${height},
+            });
+        `;
+        delayTimeList.push(delayTime * 10);
+    })
+    
+    canvas += `<canvas id="canvas${index}" class="canvas" style="width: ${width}px; height: ${height}px;"></canvas>`;
+    script += `(function() {
+        var canvas = document.getElementById('canvas${index}');
+        var ctx = canvas.getContext('2d');
+        canvas.width = ${width};
+        canvas.height = ${height};
+
+        var list = [];
+        ${subScript}
+        var delayTime = [${delayTimeList.join(',')}];
+        var count = ${count};
+
+        var info = list[0];
+        ctx.putImageData(info.image, info.left, info.top, 0, 0, info.width, info.height);
+
+        window.play${index} = function() {
+            now = 0;
+
+            var next = function(index) {
+                setTimeout(function() {
+                    var info = list[now];
+                    ctx.putImageData(info.image, info.left, info.top, 0, 0, info.width, info.height);
+
+                    now++;
+                    if (now >= count) now = 0;
+
+                    next(now);
+                }, delayTime[index]);
+            };
+
+            next(0);
+        }
+    })();`;    
+});
+
+const tpl = fs.readFileSync(__dirname + '/./tpl.html', {encoding: 'utf8'});
+const html = gen(tpl, {
+    canvas,
     script,
-    width: gif.width,
-    height: gif.height
 });
 
 fs.writeFileSync(__dirname + '/./out.html', html, {encoding: 'utf8'})
